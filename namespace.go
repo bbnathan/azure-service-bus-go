@@ -28,14 +28,17 @@ import (
 	"fmt"
 	"runtime"
 	"strings"
-
+	"flag"
+	"net/url"
+	"log"
 	"github.com/Azure/azure-amqp-common-go/v2/aad"
 	"github.com/Azure/azure-amqp-common-go/v2/auth"
 	"github.com/Azure/azure-amqp-common-go/v2/cbs"
 	"github.com/Azure/azure-amqp-common-go/v2/conn"
 	"github.com/Azure/azure-amqp-common-go/v2/sas"
 	"github.com/Azure/go-autorest/autorest/azure"
-	"golang.org/x/net/websocket"
+	"github.com/gorilla/websocket"
+	//	"golang.org/x/net/websocket"
 	"pack.ag/amqp"
 )
 
@@ -170,6 +173,8 @@ func NewNamespace(opts ...NamespaceOption) (*Namespace, error) {
 }
 
 func (ns *Namespace) newClient() (*amqp.Client, error) {
+	//	var addr = flag.String("addr", "localhost:8080", "http service address")
+	flag.Parse()
 	defaultConnOptions := []amqp.ConnOption{
 		amqp.ConnSASLAnonymous(),
 		amqp.ConnMaxSessions(65535),
@@ -189,14 +194,26 @@ func (ns *Namespace) newClient() (*amqp.Client, error) {
 	}
 
 	if ns.useWebSocket {
-		wssHost := ns.getWSSHostURI() + "$servicebus/websocket"
-		wssConn, err := websocket.Dial(wssHost, "amqp", "http://localhost/")
+		wssHost := ns.getWSSHostURI()
+		wssPath := "$servicebus/websocket"
+		wssUri := fmt.Sprintf("%s/%s", wssHost, wssPath)
+		// wssConn, err := websocket.Dial(wssHost, "amqp", "http://localhost/")
+		//u := url.URL{Scheme: "wss", Host: *addr, Port: 4446, Path: wssPath}
+
+		u,err := url.Parse(wssUri)
+		if err != nil {
+			return nil, err
+		}
+		
+		log.Printf("connecting to %s", u.String())
+		//		wssConn, err := websocket.NetDial(wssHost, "amqp")
+		wssConn, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
 		if err != nil {
 			return nil, err
 		}
 
-		wssConn.PayloadType = websocket.BinaryFrame
-		return amqp.New(wssConn, append(defaultConnOptions, amqp.ConnServerHostname(ns.getHostname()))...)
+		//wssConn.PayloadType = websocket.BinaryFrame
+		return amqp.New(wssConn.UnderlyingConn(), append(defaultConnOptions, amqp.ConnServerHostname(ns.getHostname()))...)
 	}
 
 	return amqp.Dial(ns.getAMQPHostURI(), defaultConnOptions...)

@@ -8,6 +8,7 @@ require (
 	github.com/Azure/go-autorest v12.0.0+incompatible
 	github.com/devigned/tab v0.1.1
 	github.com/fortytw2/leaktest v1.3.0 // indirect
+	github.com/gorilla/websocket v1.4.1
 	github.com/grpc-ecosystem/grpc-gateway v1.9.2 // indirect
 	github.com/joho/godotenv v1.3.0
 	github.com/mitchellh/mapstructure v1.1.2
